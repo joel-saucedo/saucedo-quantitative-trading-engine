@@ -1,22 +1,22 @@
-# Saucedo Quantitative Trading Engine 📈
+# Saucedo Quantitative Trading Engine
 
-A comprehensive, production-ready backtesting and strategy analysis framework designed for rapid iteration and testing of quantitative trading strategies. Built with emphasis on performance, scalability, and statistical rigor.
+A backtesting and strategy analysis framework for quantitative trading strategies, focusing on performance, scalability, and statistical rigor.
 
-## 🌟 Features
+## Features
 
-### High-Performance Backtesting Engine
+### Backtesting Engine
 - **Vectorized Operations**: Optimized for speed with numpy/pandas vectorizations
 - **Parallel Strategy Execution**: Test multiple strategies simultaneously
-- **Memory Efficient**: Smart data loading and caching for large datasets
+- **Memory Efficient**: Efficient data loading and caching for large datasets
 - **Event-Driven Architecture**: Realistic order execution with slippage and costs
 
-### Rapid Strategy Development & Testing
+### Strategy Development & Testing
 - **Strategy Factory Pattern**: Easy registration and management of trading strategies
 - **Parameter Sweep Framework**: Automated parameter optimization across strategy variants
 - **Hot Reloading**: Modify strategies without restarting backtesting process
 - **Configuration Management**: YAML/JSON-based strategy configurations
 
-### Advanced Statistical Analysis
+### Statistical Analysis
 - **Multiple Bootstrap Methods**: IID, Stationary, Block, Circular, and Wild Bootstrap
 - **Comprehensive Risk Metrics**: VaR, CVaR, Maximum Drawdown, Ulcer Index, and more
 - **Edge Detection**: Regime analysis, autocorrelation preservation, tail risk assessment
@@ -28,13 +28,13 @@ A comprehensive, production-ready backtesting and strategy analysis framework de
 - **Multi-Timeframe Support**: Simultaneous analysis across multiple timeframes
 - **Portfolio Optimization**: Mean-variance and risk-parity optimization
 
-### Professional Analytics & Reporting
+### Analytics & Reporting
 - **Real-Time Monitoring**: Live dashboard for running backtests
 - **Interactive Visualizations**: Comprehensive plotting suite
 - **Export Capabilities**: CSV, Excel, JSON, and HTML reports
 - **Comparison Tools**: Multi-strategy performance comparison
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Basic Strategy Backtesting
 ```python
@@ -79,7 +79,7 @@ results = bootstrap.run_bootstrap_simulation()
 print(f"95% Confidence Interval: {results['confidence_intervals']}")
 ```
 
-## 📦 Installation
+## Installation
 
 ```bash
 # Clone the repository
@@ -93,7 +93,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-## 🔧 Requirements
+## Requirements
 
 - Python 3.9+
 - NumPy, Pandas, SciPy
@@ -102,7 +102,7 @@ pip install -e .
 - Scikit-learn, Statsmodels
 - PyPortfolioOpt (optional)
 
-## 📊 Usage Examples
+## Usage Examples
 
 ### Basic Bootstrap Analysis
 ```python
@@ -136,7 +136,7 @@ tail_metrics = bootstrap.tail_risk_analysis()
 robustness = bootstrap.robustness_tests()
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 trading-strategy-analyzer/
@@ -153,7 +153,7 @@ trading-strategy-analyzer/
 └── config/                    # Configuration files
 ```
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run all tests
@@ -166,9 +166,9 @@ pytest tests/ --cov=src --cov-report=html
 pytest tests/test_bootstrapping.py -v
 ```
 
-## 📈 Key Metrics
+## Key Metrics
 
-The framework calculates 20+ performance and risk metrics:
+The framework calculates over 20 performance and risk metrics:
 
 - **Return Metrics**: CAGR, Total Return, Annualized Return
 - **Risk Metrics**: Volatility, VaR, CVaR, Maximum Drawdown
@@ -176,7 +176,7 @@ The framework calculates 20+ performance and risk metrics:
 - **Tail Risk**: Skewness, Kurtosis, Tail Ratio
 - **Advanced**: Information Ratio, Treynor Ratio, Jensen's Alpha
 
-## 🔬 Statistical Methods
+## Statistical Methods
 
 ### Bootstrap Variants
 - **IID Bootstrap**: Simple resampling with replacement
@@ -190,7 +190,7 @@ The framework calculates 20+ performance and risk metrics:
 - Anderson-Darling tests
 - Mann-Whitney U tests
 
-## 🎯 Advanced Features
+## Advanced Features
 
 ### Edge Detection
 - Regime change detection using HMM
@@ -204,37 +204,36 @@ The framework calculates 20+ performance and risk metrics:
 - Out-of-sample performance
 - Stress testing scenarios
 
-## 📖 Documentation
+## Documentation
 
 - [API Reference](docs/api_reference.md)
 - [Tutorial: Getting Started](docs/tutorials/getting_started.md)
 - [Advanced Usage](docs/tutorials/advanced_usage.md)
 - [Strategy Development Guide](docs/tutorials/strategy_development.md)
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -m 'Add your feature'`)
+4. Push to the branch (`git push origin feature/your-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- Inspired by modern quantitative finance research
-- Built for the trading community
-- Designed for academic and professional use
+- Inspired by modern quantitative finance research.
+- Intended for the trading community, for academic and professional use.
 
-## 📞 Support
+## Support
 
-- Create an issue for bugs or feature requests
-- Check the documentation for common questions
-- Contribute to make it better!
+- For bugs or feature requests, please create an issue.
+- Consult the documentation for common questions.
+- Contributions are welcome.
 
 ---
 
-**⚠️ Disclaimer**: This software is for educational and research purposes. Past performance does not guarantee future results. Always conduct thorough testing before deploying any trading strategy.
+**Disclaimer**: This software is for educational and research purposes. Past performance does not guarantee future results. Always conduct thorough testing before deploying any trading strategy.
