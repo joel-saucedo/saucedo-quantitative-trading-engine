@@ -7,37 +7,46 @@ A streamlined backtesting and strategy analysis framework optimized for rapid st
 ### Instant Strategy Testing
 ```bash
 # Test a strategy in seconds
-python quick_test.py --strategy momentum --symbols BTC_USD,ETH_USD --period 2024
+python tests/quick_test.py --strategy momentum --symbols BTC_USD,ETH_USD --period 2024
 
 # Test composite pair trading strategy  
-python quick_test.py --strategy composite --period ytd
+python tests/quick_test.py --strategy composite --period ytd
 
 # List available strategies
-python quick_test.py --list-strategies
+python tests/quick_test.py --list-strategies
+```
+
+### Comprehensive Single Strategy Analysis
+```bash
+# Full statistical analysis with optimized bootstrap
+python tests/single_strategy_comprehensive_test.py momentum --symbols BTC_USD --start-date 2023-01-01
+
+# Quick validation mode (development)
+python tests/single_strategy_comprehensive_test.py momentum --symbols BTC_USD,ETH_USD --quick
 ```
 
 ### Interactive Strategy Runner
 ```bash
 # Simple interactive testing
-python run_strategy.py
+python tests/run_strategy.py
 
 # Run specific strategy with plots
-python run_strategy.py momentum --plot
+python tests/run_strategy.py momentum --plot
 
 # Quick parameter optimization
-python run_strategy.py --optimize composite --params lookback_window=20,30,40
+python tests/run_strategy.py --optimize composite --params lookback_window=20,30,40
 ```
 
 ### Batch Testing & Comparison
 ```bash
 # Test multiple strategies
-python batch_test.py --strategies momentum,mean_reversion,composite --symbols BTC_USD,ETH_USD
+python tests/batch_test.py --strategies momentum,mean_reversion,composite --symbols BTC_USD,ETH_USD
 
 # Use configuration file
-python batch_test.py --config config/batch_configs/quick_test.yaml
+python tests/batch_test.py --config config/batch_configs/quick_test.yaml
 
 # Parameter optimization
-python batch_test.py --optimize composite --param-range lookback_window=20,30,40 z_entry_threshold=1.5,2.0,2.5
+python tests/batch_test.py --optimize composite --param-range lookback_window=20,30,40 z_entry_threshold=1.5,2.0,2.5
 ```
 
 ## 📁 Optimized Structure
@@ -102,9 +111,15 @@ python scripts/backtesting/comprehensive_stat_arb_backtest.py --strategy composi
 
 ## 💡 Key Features
 
-### ⚡ Instant Testing
-- **Sub-5 Second Tests**: Quick strategy validation without overhead
-- **One-Command Testing**: Simple CLI for immediate results  
+### ⚡ Performance Optimized
+- **10x Faster Bootstrap**: Optimized configurations for development vs production
+- **Smart Caching**: Intelligent data loading and result caching
+- **Memory Efficient**: Reduced memory footprint for large backtests
+- **Configurable Modes**: Development (fast) vs Production (rigorous) configurations
+
+### 🧪 Development-First Approach
+- **Sub-5 Second Tests**: Quick strategy validation without overhead  
+- **One-Command Testing**: Simple CLI for immediate results
 - **Interactive Mode**: Development-friendly interface
 - **Parameter Optimization**: Automated parameter sweeps
 
@@ -337,13 +352,36 @@ robustness = bootstrap.robustness_tests()
 ## Project Structure
 
 ```
-trading-strategy-analyzer/
-├── src/
-│   ├── bootstrapping/          # Core bootstrapping methods
-│   ├── strategies/             # Strategy implementations
-│   ├── utils/                  # Utility functions
-│   └── analysis/              # Analysis modules
-├── tests/                     # Test suite
+saucedo-quantitative-trading-engine/
+├── 📁 src/                           # Core framework code
+│   ├── 📁 bootstrapping/             # Statistical analysis & bootstrap methods
+│   ├── 📁 strategies/                # Strategy implementations
+│   ├── 📁 utils/                     # Utility functions & data handling
+│   └── 📁 analysis/                  # Performance & risk analysis
+├── 📁 tests/                         # All testing & validation tools
+│   ├── 🚀 quick_test.py             # Instant strategy testing
+│   ├── 📊 single_strategy_comprehensive_test.py  # Full analysis
+│   ├── 🔄 batch_test.py             # Multi-strategy comparison
+│   └── ✅ validate_strategies.py     # Quality control
+├── 📁 config/                        # Configuration files
+│   ├── 📁 batch_configs/             # Batch testing configurations
+│   ├── 📁 strategy_configs/          # Strategy parameters
+│   └── 🔧 bootstrap_configs.yaml    # Performance profiles
+├── 📁 scripts/                       # Advanced analysis scripts
+│   ├── 📁 backtesting/               # Production backtesting
+│   ├── 📁 analysis/                  # Research analysis
+│   └── 📁 data_collection/           # Data acquisition
+├── 📁 research/                      # Research & prototypes
+│   ├── 📁 strategy_prototypes/       # Experimental strategies
+│   └── 📁 results_analysis/          # Research notebooks
+├── 📁 results/                       # Output directory
+│   ├── 📁 backtests/                 # Backtest results
+│   ├── 📁 plots/                     # Generated visualizations
+│   └── 📁 exports/                   # Export data
+├── 📁 docs/                          # Documentation
+│   ├── 📖 PERFORMANCE_OPTIMIZATION.md # Performance guide
+│   └── 📁 tutorials/                 # Getting started guides
+└── 📁 examples/                      # Usage examples
 ├── examples/                  # Usage examples
 ├── data/                      # Sample data and benchmarks
 ├── results/                   # Output directory

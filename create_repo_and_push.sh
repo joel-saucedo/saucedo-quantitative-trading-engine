@@ -2,7 +2,7 @@
 
 # Variables - Replace these with your desired values
 #REPO_NAME="QuantumPortfolioPIMC"
-COMMIT_MESSAGE="🧹 Clean up project structure: remove duplicates, organize files, update .gitignore"
+COMMIT_MESSAGE="📚 Add performance optimization docs and update README with clean structure"
 
 # Initialize Git repository, set main branch, add all files, commit, create GitHub repo, and push
 # Using && ensures each command only runs if the previous one succeeds
