@@ -1,0 +1,91 @@
+{
+  "strategy_name": "momentum",
+  "strategy_params": {
+    "lookback_period": 20,
+    "momentum_threshold": 0.02
+  },
+  "timestamp": "20250526_003241",
+  "test_period": {
+    "start": "2024-01-01",
+    "end": "2024-02-01"
+  },
+  "symbols": [
+    "BTC_USD"
+  ],
+  "backtest_results": {
+    "BTC_USD": {
+      "total_return": 0.0,
+      "annual_return": 0.0,
+      "volatility": 0.0,
+      "sharpe_ratio": 0,
+      "sortino_ratio": 0,
+      "calmar_ratio": 0,
+      "information_ratio": 0.01573414178226501,
+      "max_drawdown": 0.0,
+      "win_rate": 0,
+      "total_trades": "0",
+      "winning_trades": "0",
+      "losing_trades": "0",
+      "avg_win": 0,
+      "avg_loss": 0,
+      "profit_factor": 0,
+      "strategy_returns": [
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        -0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        -0.0,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0,
+        -0.0,
+        0.0,
+        0.0,
+        -0.0,
+        0.0,
+        -0.0,
+        -0.0,
+        0.0
+      ]
+    }
+  },
+  "monte_carlo_results": {
+    "BTC_USD": {
+      "edge_score": 5,
+      "edge_assessment": "NO STATISTICAL EDGE",
+      "is_statistically_significant": "False"
+    }
+  },
+  "bootstrap_results": {},
+  "risk_results": {
+    "BTC_USD": {
+      "var_90": 0.0,
+      "var_95": 0.0,
+      "var_99": 0.0,
+      "cvar_90": 0.0,
+      "cvar_95": 0.0,
+      "cvar_99": 0.0,
+      "downside_deviation": 0,
+      "max_consecutive_losses": 0,
+      "max_consecutive_wins": 0,
+      "return_skewness": 0.0,
+      "return_kurtosis": 0.0,
+      "ulcer_index": 0.0
+    }
+  }
+}
