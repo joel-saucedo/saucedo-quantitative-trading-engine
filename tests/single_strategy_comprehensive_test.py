@@ -44,10 +44,12 @@ sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / 'src'))
 
 from src.utils.data_loader import DataLoader
+from src.utils.config_manager import get_bootstrap_config, get_validation_config, list_available_profiles
 from src.strategies.momentum import MomentumStrategy
 from src.strategies.mean_reversion import BollingerBandsStrategy
 from src.strategies.simple_pairs_strategy_fixed import SimplePairsStrategy, TrendFollowingStrategy, VolatilityBreakoutStrategy
 from src.bootstrapping.core import AdvancedBootstrapping, BootstrapConfig, BootstrapMethod
+from tests.statistical_validation import MonteCarloValidator, ValidationConfig
 from tests.statistical_validation import MonteCarloValidator, ValidationConfig
 
 warnings.filterwarnings('ignore')
@@ -67,7 +69,7 @@ class SingleStrategyComprehensiveTest:
     
     def __init__(self, strategy_name: str, symbols: List[str] = None, 
                  start_date: str = '2015-01-01', end_date: str = '2024-12-31',
-                 output_dir: str = None):
+                 output_dir: str = None, profile: str = 'development'):
         """Initialize the single strategy test."""
         
         if strategy_name not in self.AVAILABLE_STRATEGIES:
@@ -79,6 +81,45 @@ class SingleStrategyComprehensiveTest:
         self.symbols = symbols or ['BTC_USD', 'ETH_USD']
         self.start_date = start_date
         self.end_date = end_date
+        self.profile = profile
+        
+        # Load configuration profiles
+        try:
+            bootstrap_profile = get_bootstrap_config(profile)
+            validation_profile = get_validation_config(profile)
+            
+            # Convert profile objects to expected config objects
+            from src.bootstrapping.core import BootstrapMethod
+            
+            # Convert method string to enum
+            method_mapping = {
+                'IID': BootstrapMethod.IID,
+                'BLOCK': BootstrapMethod.BLOCK,
+                'STATIONARY': BootstrapMethod.STATIONARY
+            }
+            bootstrap_method = method_mapping.get(bootstrap_profile.method, BootstrapMethod.IID)
+            
+            # Create BootstrapConfig object
+            self.bootstrap_config = BootstrapConfig(
+                n_sims=bootstrap_profile.n_sims,
+                batch_size=bootstrap_profile.batch_size,
+                block_length=bootstrap_profile.block_length
+            )
+            self.bootstrap_config.method = bootstrap_method
+            
+            # Create ValidationConfig object
+            self.validation_config = ValidationConfig(
+                n_bootstrap_samples=validation_profile.n_bootstrap_samples,
+                n_permutation_samples=validation_profile.n_permutation_samples,
+                confidence_level=validation_profile.confidence_level,
+                alpha=validation_profile.alpha
+            )
+            
+            print(f"✅ Using '{profile}' performance profile")
+        except Exception as e:
+            print(f"⚠️  Failed to load profile '{profile}', using defaults: {e}")
+            self.bootstrap_config = BootstrapConfig()
+            self.validation_config = ValidationConfig()
         
         self.output_dir = Path(output_dir) if output_dir else Path(f"results/single_strategy_{strategy_name}")
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -356,14 +397,9 @@ class SingleStrategyComprehensiveTest:
         """Run Monte Carlo statistical validation."""
         print("  🎲 Running Monte Carlo validation...")
         
-        # Initialize validator - Optimized for faster development testing
-        config = ValidationConfig(
-            n_bootstrap_samples=200,  # Reduced from 1000 for faster execution
-            n_permutation_samples=200,  # Reduced from 1000 for faster execution
-            confidence_level=0.95,
-            alpha=0.05
-        )
-        validator = MonteCarloValidator(config)
+        # Use validation configuration from profile
+        validator = MonteCarloValidator(self.validation_config)
+        print(f"      🔧 Using profile '{self.profile}': {self.validation_config.n_bootstrap_samples} bootstrap, {self.validation_config.n_permutation_samples} permutation samples")
         
         for symbol in self.data.keys():
             try:
@@ -419,23 +455,17 @@ class SingleStrategyComprehensiveTest:
                 import time
                 start_time = time.time()
                 
-                # Bootstrap configuration - Optimized for faster development testing
-                config = BootstrapConfig(
-                    n_sims=100,  # Reduced from 1000 for faster execution
-                    batch_size=50,  # Reduced batch size for better memory usage
-                    block_length=10
-                )
-                
-                # Run bootstrap - Using IID method for faster execution during development
+                # Use bootstrap configuration from profile
                 bootstrapper = AdvancedBootstrapping(
                     ret_series=returns,
-                    method=BootstrapMethod.IID,  # Faster than BLOCK for development
-                    config=config
+                    method=self.bootstrap_config.method,
+                    config=self.bootstrap_config
                 )
                 result = bootstrapper.run_bootstrap_simulation()
                 
                 execution_time = time.time() - start_time
                 print(f"      ⏱️  Bootstrap completed in {execution_time:.2f} seconds")
+                print(f"      🔧 Used profile '{self.profile}': {self.bootstrap_config.n_sims} sims, {self.bootstrap_config.method.value} method")
                 
                 # Debug: Print what's in the result
                 print(f"      🔍 Bootstrap result keys: {list(result.keys())}")
@@ -1541,6 +1571,8 @@ def main():
     parser = argparse.ArgumentParser(description='Single Strategy Comprehensive Test')
     parser.add_argument('strategy', choices=list(SingleStrategyComprehensiveTest.AVAILABLE_STRATEGIES.keys()),
                        help='Strategy to test')
+    parser.add_argument('--profile', default='development',
+                       help=f'Performance profile to use (default: development). Available: {list_available_profiles()}')
     parser.add_argument('--output-dir', 
                        help='Output directory for results (default: results/single_strategy_{strategy})')
     parser.add_argument('--symbols', default='BTC_USD,ETH_USD',
@@ -1561,7 +1593,8 @@ def main():
         symbols=symbols,
         start_date=args.start_date,
         end_date=args.end_date,
-        output_dir=args.output_dir
+        output_dir=args.output_dir,
+        profile=args.profile
     )
     
     # Run comprehensive test
