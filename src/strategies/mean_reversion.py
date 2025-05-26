@@ -74,22 +74,31 @@ class BollingerBandsStrategy(BaseStrategy):
     
     def generate_signals(self, data: pd.DataFrame, current_idx: int) -> Signal:
         """Generate Bollinger Bands mean reversion signals."""
-        if current_idx < max(self.window, self.rsi_window):
+        # Ensure we have enough historical data
+        if len(data) <= max(self.window, self.rsi_window):
             return Signal.HOLD
         
-        # Get recent price data
-        prices = data.iloc[max(0, current_idx - self.window):current_idx + 1]['close']
+        # Get recent price data (only historical, no look-ahead)
+        prices = data['close']
         current_price = prices.iloc[-1]
         
-        # Calculate Bollinger Bands
-        sma = prices.rolling(window=self.window).mean().iloc[-1]
-        std = prices.rolling(window=self.window).std().iloc[-1]
+        # Ensure we have enough data for calculations
+        if len(prices) < self.window:
+            return Signal.HOLD
+        
+        # Calculate Bollinger Bands using only historical data
+        recent_prices = prices.tail(self.window)
+        sma = recent_prices.mean()
+        std = recent_prices.std()
         upper_band = sma + (self.num_stds * std)
         lower_band = sma - (self.num_stds * std)
         
-        # Calculate RSI for confirmation
-        rsi_prices = data.iloc[max(0, current_idx - self.rsi_window - 10):current_idx + 1]['close']
-        rsi = self.calculate_rsi(rsi_prices, self.rsi_window)
+        # Calculate RSI for confirmation using only historical data
+        if len(prices) >= self.rsi_window:
+            rsi_prices = prices.tail(self.rsi_window + 10)  # Get extra data for RSI calculation
+            rsi = self.calculate_rsi(rsi_prices, self.rsi_window)
+        else:
+            rsi = 50  # Neutral RSI if not enough data
         
         # Generate signals
         if current_price <= lower_band and rsi <= self.rsi_oversold:

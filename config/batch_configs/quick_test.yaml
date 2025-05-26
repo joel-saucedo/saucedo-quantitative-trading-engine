@@ -1,0 +1,26 @@
+# Quick Batch Test Configuration
+# Test multiple strategies with default parameters
+
+strategies:
+  - momentum
+  - mean_reversion
+  - composite
+
+symbols:
+  - BTC_USD
+  - ETH_USD
+
+period: "2024"
+
+# Optional: Strategy-specific parameters
+strategy_params:
+  momentum:
+    lookback_period: 20
+    
+  mean_reversion:
+    lookback_period: 20
+    
+  composite:
+    parameters:
+      lookback_window: 30
+      z_entry_threshold: 2.0

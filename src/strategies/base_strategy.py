@@ -61,6 +61,7 @@ class BaseStrategy(ABC):
         parameters: Optional[Dict[str, Any]] = None,
         transaction_cost: float = 0.001,
         slippage: float = 0.0001,
+        adversarial_slippage: bool = False,
         max_positions: int = 1,
         min_holding_period: int = 1
     ):
@@ -100,9 +101,12 @@ class BaseStrategy(ABC):
         """
         Generate trading signal based on current market data.
         
+        CRITICAL: This method must NEVER access data beyond current_idx to prevent look-ahead bias.
+        Only use data.iloc[:current_idx+1] or data.iloc[current_idx-lookback:current_idx+1]
+        
         Args:
-            data: Historical price data
-            current_idx: Current time index
+            data: Historical price data (only use up to current_idx)
+            current_idx: Current time index (do NOT access beyond this)
             
         Returns:
             Trading signal (BUY, SELL, HOLD)
@@ -215,8 +219,8 @@ class BaseStrategy(ABC):
         # Update cash
         if signal == Signal.BUY:
             self.cash -= (trade_value + total_cost)
-        else:
-            self.cash += (trade_value - total_cost)
+        else:  # SELL signal - we need margin/collateral for short position
+            self.cash -= total_cost  # Only deduct transaction costs for short
             
         return True
     
@@ -268,10 +272,13 @@ class BaseStrategy(ABC):
         
         self.trades.append(trade)
         
-        # Update cash
-        self.cash += trade_value - exit_cost
+        # Update cash - return the position proceeds
         if position.signal == Signal.BUY:
-            self.cash += pnl
+            # For long positions: get back the sale proceeds
+            self.cash += trade_value - exit_cost + pnl
+        else:
+            # For short positions: pay back the borrowed amount and keep profit/loss
+            self.cash += pnl  # Only add/subtract the profit/loss
         
         # Remove position
         self.positions.remove(position)
@@ -285,10 +292,12 @@ class BaseStrategy(ABC):
         for position in self.positions:
             current_price = current_prices.get(position.symbol, position.entry_price)
             if position.signal == Signal.BUY:
+                # Long position: current value = shares * current_price
                 position_value = position.size * current_price
             else:
-                # For short positions
-                position_value = abs(position.size) * (2 * position.entry_price - current_price)
+                # Short position: profit/loss = shares * (entry_price - current_price)
+                unrealized_pnl = abs(position.size) * (position.entry_price - current_price)
+                position_value = unrealized_pnl  # Only add the unrealized P&L
             total_value += position_value
             
         self.portfolio_value.append(total_value)
@@ -324,8 +333,11 @@ class BaseStrategy(ABC):
         for i, (timestamp, row) in enumerate(data.iterrows()):
             current_price = row['close']
             
-            # Generate signal
-            signal = self.generate_signals(data, i)
+            # CRITICAL: Only pass historical data up to current point to prevent look-ahead bias
+            historical_data = data.iloc[:i+1]
+            
+            # Generate signal using only historical data
+            signal = self.generate_signals(historical_data, i)
             self.signals_history.append((timestamp, signal))
             
             # Execute trades based on signal

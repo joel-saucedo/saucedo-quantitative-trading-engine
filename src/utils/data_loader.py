@@ -11,7 +11,13 @@ import yfinance as yf
 from typing import Dict, List, Optional, Union, Tuple
 from datetime import datetime, timedelta
 import warnings
+from pathlib import Path # Added
+import pyarrow.dataset as ds # Added
 warnings.filterwarnings('ignore')
+
+# Define the root directory for processed crypto data
+# This assumes data_loader.py is in src/utils/
+PROCESSED_CRYPTO_DATA_ROOT = Path(__file__).resolve().parent.parent.parent / "data" / "crypto" / "processed"
 
 
 class DataLoader:
@@ -142,6 +148,145 @@ class DataLoader:
         
         combined_data = pd.DataFrame(data_dict)
         return combined_data.dropna()
+
+    def load_partitioned_crypto_data(
+        self,
+        symbol: str,
+        interval: str,
+        start_date: Union[str, datetime],
+        end_date: Union[str, datetime],
+        data_root: Path = PROCESSED_CRYPTO_DATA_ROOT
+    ) -> pd.DataFrame:
+        """
+        Loads crypto data from partitioned Parquet files for a specific symbol, interval, and date range.
+        """
+        print(f"--- DEBUG: DataLoader.load_partitioned_crypto_data (FULL VERSION) ---")
+        sanitized_symbol = symbol.replace("/", "_").replace("-", "_") # Ensure this is used if symbol can have hyphens
+        symbol_interval_path = data_root / sanitized_symbol / interval
+        print(f"DEBUG: Looking for data in {symbol_interval_path}")
+
+        if not symbol_interval_path.exists():
+            print(f"DEBUG: Data path does not exist: {symbol_interval_path}")
+            return pd.DataFrame()
+
+        if isinstance(start_date, str):
+            start_dt = pd.to_datetime(start_date, utc=True)
+        else:
+            start_dt = pd.Timestamp(start_date, tz='UTC' if start_date.tzinfo is None else None)
+            if start_dt.tzinfo is None: start_dt = start_dt.tz_localize('UTC')
+
+        if isinstance(end_date, str):
+            end_dt = pd.to_datetime(end_date, utc=True)
+        else:
+            end_dt = pd.Timestamp(end_date, tz='UTC' if end_date.tzinfo is None else None)
+            if end_dt.tzinfo is None: end_dt = end_dt.tz_localize('UTC')
+        
+        if end_dt.hour == 0 and end_dt.minute == 0 and end_dt.second == 0:
+            end_dt = end_dt + pd.Timedelta(days=1) - pd.Timedelta(microseconds=1)
+        print(f"DEBUG: Date range: {start_dt} to {end_dt}")
+
+        try:
+            all_dfs = []
+            print(f"DEBUG: Iterating through {symbol_interval_path} for years...")
+            for year_dir in symbol_interval_path.iterdir():
+                if not year_dir.is_dir() or not year_dir.name.isdigit():
+                    print(f"DEBUG: Skipping non-directory or non-digit year: {year_dir.name}")
+                    continue
+                year = int(year_dir.name)
+                print(f"DEBUG: Checking year {year}")
+                if year < start_dt.year or year > end_dt.year:
+                    print(f"DEBUG: Skipping year {year} (outside range {start_dt.year}-{end_dt.year})")
+                    continue
+                
+                print(f"DEBUG: Iterating through {year_dir} for months...")
+                for month_dir in year_dir.iterdir():
+                    if not month_dir.is_dir() or not month_dir.name.isdigit():
+                        print(f"DEBUG: Skipping non-directory or non-digit month: {month_dir.name}")
+                        continue
+                    month = int(month_dir.name)
+                    print(f"DEBUG: Checking month {month} in year {year}")
+                    
+                    month_start_current_loop = pd.Timestamp(year=year, month=month, day=1, tz='UTC')
+                    month_end_current_loop = month_start_current_loop + pd.DateOffset(months=1) - pd.Timedelta(microseconds=1)
+                    
+                    if month_end_current_loop < start_dt or month_start_current_loop > end_dt:
+                        print(f"DEBUG: Skipping {year}/{month} (outside date range)")
+                        continue
+                    print(f"DEBUG: Processing {year}/{month}")
+                    
+                    for parquet_file in month_dir.glob("*.parquet"):
+                        print(f"DEBUG: Reading {parquet_file}")
+                        try:
+                            df_chunk = pd.read_parquet(parquet_file)
+                            if not df_chunk.empty:
+                                print(f"DEBUG: Loaded {len(df_chunk)} records from {parquet_file}. Index type: {type(df_chunk.index)}, Index TZ: {df_chunk.index.tz if isinstance(df_chunk.index, pd.DatetimeIndex) else 'N/A'}")
+                                all_dfs.append(df_chunk)
+                            else:
+                                print(f"DEBUG: Empty df_chunk from {parquet_file}")
+                        except Exception as e:
+                            print(f"Warning: Could not read {parquet_file}: {e}")
+            
+            print(f"DEBUG: Total dataframes collected in all_dfs: {len(all_dfs)}")
+            if not all_dfs:
+                print(f"No parquet files found or loaded for {symbol} ({interval}) in date range {start_dt} to {end_dt}")
+                return pd.DataFrame()
+            
+            print(f"DEBUG: Concatenating {len(all_dfs)} dataframes...")
+            df = pd.concat(all_dfs) # We confirmed removing ignore_index=True is better
+            print(f"DEBUG: Combined dataframe shape after concat: {df.shape}. Index type: {type(df.index)}, Index TZ: {df.index.tz if isinstance(df.index, pd.DatetimeIndex) else 'N/A'}")
+            
+            if df.empty:
+                print(f"No data loaded for {symbol} ({interval}) from {start_dt} to {end_dt} after concat.")
+                return pd.DataFrame()
+
+            # Ensure index is DatetimeIndex and UTC localized AFTER concatenation
+            # This step is crucial if individual parquets didn't have a uniform index or if concat messed it up.
+            if not isinstance(df.index, pd.DatetimeIndex):
+                print(f"DEBUG: Index is not DatetimeIndex after concat. Type: {type(df.index)}. Attempting to set from 'date' column or convert.")
+                if 'date' in df.columns: # Check if 'date' column was created by ignore_index=True or similar
+                    df['date'] = pd.to_datetime(df['date'])
+                    df = df.set_index('date')
+                    print(f"DEBUG: Set index from 'date' column. New index type: {type(df.index)}")
+                else: # If no 'date' column, try to convert the existing index
+                    try:
+                        df.index = pd.to_datetime(df.index)
+                        print(f"DEBUG: Converted existing index to DatetimeIndex. New index type: {type(df.index)}")
+                    except Exception as e:
+                        print(f"DEBUG: Could not convert existing index to DatetimeIndex after concat. Error: {e}")
+                        return pd.DataFrame() 
+            
+            if df.index.tz is None:
+                print(f"DEBUG: Localizing combined df index to UTC. Current tz: {df.index.tz}")
+                df.index = df.index.tz_localize('UTC')
+            elif df.index.tz != 'UTC': # Check for pd.NaT or other non-UTC timezones
+                print(f"DEBUG: Converting combined df index to UTC. Current tz: {df.index.tz}")
+                df.index = df.index.tz_convert('UTC')
+            else:
+                 print(f"DEBUG: Combined df index is already UTC. TZ: {df.index.tz}")
+
+
+            print(f"DEBUG: Combined DataFrame index before final filtering: Min={df.index.min()}, Max={df.index.max()}, TZ={df.index.tz}")
+            df = df[(df.index >= start_dt) & (df.index <= end_dt)]
+            print(f"DEBUG: DataFrame shape after final date filtering: {df.shape}")
+            
+            df = df.sort_index()
+            df = df[~df.index.duplicated(keep='first')] # Remove duplicates that might arise from overlapping reads or bad data
+            
+            df.columns = [col.lower() for col in df.columns]
+            
+            expected_cols = ['open', 'high', 'low', 'close', 'volume']
+            missing_cols = [col for col in expected_cols if col not in df.columns]
+            if missing_cols:
+                print(f"Warning: Missing expected columns {missing_cols} for {symbol} ({interval}). Available: {df.columns.tolist()}")
+
+            print(f"Loaded {len(df)} records for {symbol} ({interval}) from {start_dt} to {end_dt}")
+            return df
+
+        except Exception as e:
+            print(f"Error loading partitioned data for {symbol} ({interval}): {e}")
+            import traceback
+            traceback.print_exc()
+            return pd.DataFrame()
 
 
 def generate_synthetic_data(

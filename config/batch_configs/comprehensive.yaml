@@ -1,0 +1,33 @@
+# Comprehensive Strategy Comparison
+# Test multiple parameter configurations for each strategy
+
+strategies:
+  - momentum
+  - mean_reversion
+  - composite
+
+symbols:
+  - BTC_USD
+  - ETH_USD
+
+period: "2024"
+
+# Multiple configurations per strategy
+strategy_params:
+  momentum:
+    - lookback_period: 10
+    - lookback_period: 20  
+    - lookback_period: 30
+    
+  mean_reversion:
+    - lookback_period: 15
+    - lookback_period: 25
+    - lookback_period: 35
+    
+  composite:
+    - lookback_window: 20
+      z_entry_threshold: 1.5
+    - lookback_window: 30
+      z_entry_threshold: 2.0  
+    - lookback_window: 40
+      z_entry_threshold: 2.5

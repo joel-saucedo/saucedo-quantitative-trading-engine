@@ -18,10 +18,12 @@ numba>=0.56.0
 openpyxl>=3.0.0
 xlsxwriter>=3.0.0
 tables>=3.7.0
+pyarrow>=10.0.0  # Added for Parquet support
 
 # Market data (optional)
 yfinance>=0.1.87
 pandas-market-calendars>=4.0.0
+openbb>=4.0.0 # Added OpenBB
 
 # Portfolio optimization (optional)
 PyPortfolioOpt>=1.5.0

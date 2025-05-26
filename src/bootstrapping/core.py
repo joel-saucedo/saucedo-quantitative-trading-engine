@@ -15,6 +15,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 from scipy import stats
+from scipy.spatial.distance import pdist, squareform # For MMD
 from dataclasses import dataclass
 
 try:
@@ -41,6 +42,73 @@ try:
                     current_max = a[i, j]
                 out[i, j] = current_max
         return out
+
+    @njit(cache=True)
+    def _gaussian_kernel_numba(x: np.ndarray, y: np.ndarray, sigma_sq: float) -> float:
+        """Numba optimized Gaussian kernel."""
+        # Ensure sigma_sq is not zero to prevent division by zero
+        if sigma_sq == 0:
+            # If x and y are identical, kernel is 1, otherwise 0 (delta function behavior)
+            return 1.0 if np.all(x == y) else 0.0
+        return np.exp(-np.sum((x - y)**2) / (2 * sigma_sq))
+
+    @njit(cache=True)
+    def _mmd_sq_numba(X: np.ndarray, Y: np.ndarray, sigma_sq: float) -> float:
+        """Numba optimized MMD squared calculation."""
+        m = X.shape[0]
+        n = Y.shape[0]
+
+        # Ensure sigma_sq is not zero
+        if sigma_sq == 0: # If sigma_sq is zero, MMD is 0 if X and Y are identical, 1 otherwise (simplified)
+            # This is a simplification. A more rigorous handling might involve limits or specific conditions.
+            # For practical purposes, if sigma_sq is 0, it implies a very strict comparison.
+            # If distributions are identical, MMD should be 0.
+            # A proper handling for sigma_sq=0 in Gaussian kernel MMD is non-trivial.
+            # Here, we assume if sigma_sq is 0, kernel is 1 if points are same, 0 otherwise.
+            # This means MMD would be 0 if X and Y are identical element-wise, which is too strict.
+            # A better approach is to ensure sigma_sq is always positive before calling this.
+            # For now, returning a high value if not identical, 0 if identical (based on means for simplicity)
+            # This part needs careful consideration based on how sigma_sq=0 is to be interpreted.
+            if m == 0 and n == 0: return 0.0
+            if m == 0 or n == 0: return 1.0 # Arbitrary high value if one is empty
+
+            # A more robust check for identical distributions when sigma_sq is zero is complex.
+            # The median heuristic should prevent sigma_sq from being exactly zero with real data.
+            # If it happens, it implies all points are identical.
+            pass # Let the calculation proceed, _gaussian_kernel_numba will handle sigma_sq=0
+
+
+        sum_k_xx = 0.0
+        if m > 1:
+            for i in prange(m): # Changed to prange for potential parallelization if outer loop is parallel
+                for j in range(i + 1, m):
+                    sum_k_xx += _gaussian_kernel_numba(X[i], X[j], sigma_sq)
+            sum_k_xx = 2 * sum_k_xx / (m * (m - 1))
+        elif m == 1: # if only one sample, this term is conventionally 0 or not well-defined for pairwise.
+            sum_k_xx = 0.0
+
+
+        sum_k_yy = 0.0
+        if n > 1:
+            for i in prange(n): # Changed to prange
+                for j in range(i + 1, n):
+                    sum_k_yy += _gaussian_kernel_numba(Y[i], Y[j], sigma_sq)
+            sum_k_yy = 2 * sum_k_yy / (n * (n - 1))
+        elif n == 1:
+            sum_k_yy = 0.0
+        
+        sum_k_xy = 0.0
+        if m > 0 and n > 0:
+            for i in prange(m): # Changed to prange
+                for j in range(n): # No prange here, inner loop of a parallel region
+                    sum_k_xy += _gaussian_kernel_numba(X[i], Y[j], sigma_sq)
+            sum_k_xy /= (m * n)
+        else: # If either m or n is 0, this term is 0
+            sum_k_xy = 0.0
+
+
+        mmd_squared_val = sum_k_xx - 2 * sum_k_xy + sum_k_yy
+        return mmd_squared_val if mmd_squared_val >= 0 else 0.0 # Ensure non-negativity
     
 except ImportError as e:
     NUMBA_AVAILABLE = False
@@ -51,6 +119,61 @@ except ImportError as e:
     
     def _rolling_max_numba(a: np.ndarray) -> np.ndarray:
         return np.maximum.accumulate(a, axis=1)
+
+    # Fallback for MMD if Numba is not available
+    def _gaussian_kernel_numpy(x_i, x_j, sigma_sq):
+        # Ensure sigma_sq is not zero to prevent division by zero
+        if sigma_sq == 0:
+            return 1.0 if np.all(x_i == x_j) else 0.0
+        return np.exp(-np.sum((x_i - x_j)**2) / (2 * sigma_sq))
+
+    def _mmd_sq_numpy(X, Y, sigma_sq):
+        m = X.shape[0]
+        n = Y.shape[0]
+
+        # Term 1: E[k(x, x')]
+        sum_k_xx = 0.0
+        if m > 1:
+            for i in range(m):
+                for j in range(i + 1, m):
+                    sum_k_xx += _gaussian_kernel_numpy(X[i], X[j], sigma_sq)
+            term1 = 2 * sum_k_xx / (m * (m - 1))
+        elif m == 1:
+             term1 = 0.0 # Or handle as per convention for single point
+        else: # m == 0
+            term1 = 0.0
+
+
+        # Term 2: E[k(y, y')]
+        sum_k_yy = 0.0
+        if n > 1:
+            for i in range(n):
+                for j in range(i + 1, n):
+                    sum_k_yy += _gaussian_kernel_numpy(Y[i], Y[j], sigma_sq)
+            term2 = 2 * sum_k_yy / (n * (n - 1))
+        elif n == 1:
+            term2 = 0.0
+        else: # n == 0
+            term2 = 0.0
+
+
+        # Term 3: E[k(x, y)]
+        sum_k_xy = 0.0
+        if m > 0 and n > 0:
+            for i in range(m):
+                for j in range(n):
+                    sum_k_xy += _gaussian_kernel_numpy(X[i], Y[j], sigma_sq)
+            term3 = sum_k_xy / (m * n)
+        else:
+            term3 = 0.0
+        
+        mmd_squared_val = term1 + term2 - 2 * term3 # Original formula is K_XX + K_YY - 2*K_XY
+                                                # The provided code had sum_k_xx - 2 * sum_k_xy + sum_k_yy
+                                                # This seems to be a common formulation for the biased v-statistic.
+                                                # Let's stick to the structure sum_xx_terms + sum_yy_terms - 2 * sum_xy_terms
+        return mmd_squared_val if mmd_squared_val >=0 else 0.0 # Ensure non-negativity
+
+    _mmd_sq_numba = _mmd_sq_numpy # Assign numpy version if numba fails
 
 
 class TimeFrame(Enum):
@@ -487,7 +610,107 @@ class AdvancedBootstrapping:
             })
             
         return results
-    
+
+    def _calculate_distributional_distances(self, original_returns: np.ndarray, bootstrapped_samples: np.ndarray) -> Dict[str, Any]:
+        """
+        Calculate Wasserstein and MMD distances between original returns and bootstrapped samples.
+        """
+        wasserstein_distances = []
+        mmd_distances = []
+
+        # Ensure original_returns is 1D for Wasserstein and stats.wasserstein_distance
+        if original_returns.ndim > 1:
+            original_returns_1d = original_returns.flatten()
+        else:
+            original_returns_1d = original_returns
+        
+        # Prepare original returns for MMD (needs to be 2D, e.g., (n_samples, n_features))
+        # If original_returns was 1D (n_samples,), reshape to (n_samples, 1)
+        if original_returns.ndim == 1:
+            original_returns_2d_for_mmd = original_returns.reshape(-1, 1)
+        else:
+            original_returns_2d_for_mmd = original_returns # Assuming it's already (n_samples, n_features)
+
+        # Median heuristic for MMD sigma: median of pairwise squared Euclidean distances
+        # This should be calculated on the original_returns_2d_for_mmd
+        if len(original_returns_2d_for_mmd) > 1:
+            # pdist requires 2D array where each row is an observation
+            pairwise_sq_dists = squareform(pdist(original_returns_2d_for_mmd, 'sqeuclidean'))
+            # Use only upper triangle to avoid duplicates and diagonal
+            median_sq_dist = np.median(pairwise_sq_dists[np.triu_indices_from(pairwise_sq_dists, k=1)])
+            
+            # Heuristic for sigma_sq based on median distance
+            # Common heuristic: sigma = median_dist / sqrt(2) or sigma^2 = median_sq_dist / 2
+            # Another: sigma_sq = median_sq_dist (used in some libraries if not scaled by log(N))
+            # The original code had: sigma_sq = median_sq_dist / (2 * np.log(len(original_returns) + 1e-9))
+            # Let's ensure len(original_returns_2d_for_mmd) is used for consistency.
+            if len(original_returns_2d_for_mmd) > 0:
+                 denominator = 2 * np.log(len(original_returns_2d_for_mmd) + 1e-9)
+                 if denominator <= 1e-9: # Avoid division by zero or very small numbers if log is ~0
+                     sigma_sq = median_sq_dist / 2 if median_sq_dist > 0 else 1.0 # Fallback
+                 else:
+                     sigma_sq = median_sq_dist / denominator
+            else: # Should not happen if len > 1
+                sigma_sq = 1.0
+
+            if sigma_sq <= 1e-9: # Avoid division by zero or extremely small sigma in kernel
+                sigma_sq = 1.0 # Fallback to a default value
+        elif len(original_returns_2d_for_mmd) == 1: # Single data point
+             sigma_sq = 1.0 # Default sigma if only one point (MMD would be tricky)
+        else: # Empty original returns
+            sigma_sq = 1.0 # Default sigma if no data
+            # If original_returns is empty, MMD and Wasserstein are problematic.
+            # This case should ideally be handled before calling this function.
+            # For now, we proceed, and distances will likely be NaN or error if samples are also empty.
+
+        for i in range(bootstrapped_samples.shape[0]):
+            sample = bootstrapped_samples[i, :] # This is 1D
+
+            # Wasserstein distance
+            # Ensure sample is also 1D
+            if sample.ndim > 1:
+                sample_1d = sample.flatten()
+            else:
+                sample_1d = sample
+            
+            if len(original_returns_1d) > 0 and len(sample_1d) > 0:
+                try:
+                    wd = stats.wasserstein_distance(original_returns_1d, sample_1d)
+                    wasserstein_distances.append(wd)
+                except ValueError as e: # Handle cases like empty arrays if not caught before
+                    warnings.warn(f"Wasserstein distance calculation failed for sample {i}: {e}")
+                    wasserstein_distances.append(np.nan)
+            else:
+                wasserstein_distances.append(np.nan)
+            
+            # MMD (Maximum Mean Discrepancy)
+            # Reshape sample to be 2D for MMD: (n_sample_points, 1)
+            sample_2d_for_mmd = sample.reshape(-1, 1)
+
+            if original_returns_2d_for_mmd.shape[0] > 0 and sample_2d_for_mmd.shape[0] > 0:
+                # Ensure X and Y for MMD are 2D arrays where rows are samples and columns are features.
+                # Here, features = 1.
+                if NUMBA_AVAILABLE:
+                    mmd_val_sq = _mmd_sq_numba(original_returns_2d_for_mmd, sample_2d_for_mmd, sigma_sq)
+                else:
+                    mmd_val_sq = _mmd_sq_numpy(original_returns_2d_for_mmd, sample_2d_for_mmd, sigma_sq)
+                
+                # MMD is sqrt of MMD^2. MMD^2 should be non-negative.
+                mmd_distances.append(np.sqrt(max(0, mmd_val_sq)))
+            else:
+                mmd_distances.append(np.nan)
+
+
+        return {
+            'wasserstein_distances_samples': wasserstein_distances,
+            'mmd_distances_samples': mmd_distances,
+            'mean_wasserstein_distance': np.nanmean(wasserstein_distances) if wasserstein_distances else np.nan,
+            'std_wasserstein_distance': np.nanstd(wasserstein_distances) if wasserstein_distances else np.nan,
+            'mean_mmd_distance': np.nanmean(mmd_distances) if mmd_distances else np.nan,
+            'std_mmd_distance': np.nanstd(mmd_distances) if mmd_distances else np.nan,
+            'mmd_sigma_sq_used': sigma_sq
+        }
+
     def _analyze_series(self, ret: pd.Series) -> Dict[str, float]:
         """Calculate metrics for a single return series."""
         if len(ret) == 0:
@@ -535,10 +758,14 @@ class AdvancedBootstrapping:
         stats = self._calculate_advanced_metrics(samples)
         original_stats = self._analyze_series(returns)
         
+        # Calculate distributional distances
+        dist_distances = self._calculate_distributional_distances(arr, samples)
+
         return {
             'original_stats': original_stats,
             'simulated_stats': stats,
             'simulated_equity_curves': sim_equity,
+            'distributional_distances': dist_distances, # Added
             'method': self.method.value,
             'config': self.config
         }
@@ -562,10 +789,49 @@ class AdvancedBootstrapping:
         
         original_stats = self._analyze_series(pd.Series(arr))
         
+        # For streaming, distributional distances might be too memory intensive to store all samples
+        # Or could be calculated per batch and aggregated if a streaming version of distances is made
+        # For now, omitting full distributional distance calculation for streaming to avoid OOM.
+        # A summary (e.g. mean of distances per batch) could be an alternative.
+        dist_distances_summary = {"info": "Full distributional distances not computed in streaming mode"}
+        
+        # The _run_streaming_simulation method is only called when stream=True and n_sims > 10_000.
+        # If we want to compute distributional distances for smaller n_sims even in streaming context,
+        # this condition needs to be re-evaluated.
+        # However, the original logic was:
+        # if not stream or self.config.n_sims <= 10_000:
+        # This implied that if it *is* streaming (which is true here) AND n_sims is small, compute.
+        # Or if it's *not* streaming (which is false here), compute.
+        # Given this method is *only* for streaming, the `not stream` part is always false.
+        # So, the condition simplifies to: if self.config.n_sims <= 10_000 (within streaming context)
+        # This seems counterintuitive for a streaming mode designed for large N.
+        # Let's assume the intention was to always calculate it if n_sims is small, regardless of streaming mode,
+        # and for streaming mode (large N), it's skipped.
+        # The run_bootstrap_simulation method handles the non-streaming case.
+        # Here, in _run_streaming_simulation, we are in streaming mode.
+        # The original code had a check:
+        # if not stream or self.config.n_sims <= 10_000 :
+        # Since this function is called when stream is True, this simplifies to:
+        # if False or self.config.n_sims <= 10_000:
+        # which is: if self.config.n_sims <= 10_000:
+        # This means even in streaming mode, if n_sims is small, it would try to compute.
+        # This might be okay, but let's stick to the simplified logic.
+        # The parameter `stream` is not directly available here.
+        # We know we are in streaming mode because this function was called.
+        
+        # If the number of simulations is small enough, calculate full distributional distances
+        # even in streaming mode (though this might be rare for calling this specific function).
+        if self.config.n_sims <= 10_000:
+             samples_for_dist = self._generate_bootstrap_samples(arr, self.config.n_sims)
+             dist_distances = self._calculate_distributional_distances(arr, samples_for_dist)
+             dist_distances_summary = dist_distances
+
+
         return {
             'original_stats': original_stats,
             'simulated_stats': all_stats,
             'simulated_equity_curves': None,  # Not stored in streaming mode
+            'distributional_distances': dist_distances_summary, # Added
             'method': self.method.value,
             'config': self.config,
             'streaming': True
@@ -625,6 +891,10 @@ class AdvancedBootstrapping:
             'analysis_timestamp': pd.Timestamp.now(),
         }
         
+        # Add distributional distances to the top level of full_results if they exist
+        if 'distributional_distances' in bootstrap_results:
+            full_results['distributional_distances'] = bootstrap_results['distributional_distances']
+
         return full_results
     
     def export_results(self, results: Dict[str, Any], filepath: str = 'bootstrap_analysis') -> None:
@@ -655,7 +925,26 @@ class AdvancedBootstrapping:
         if 'statistical_tests' in results:
             test_df = pd.DataFrame([results['statistical_tests']])
             test_df.to_csv(f'{filepath}_statistical_tests.csv', index=False)
-    
+
+        if 'distributional_distances' in results and results['distributional_distances']:
+            dist_df_data = {}
+            if 'mean_wasserstein_distance' in results['distributional_distances']: # Check if full dict or just info
+                dist_df_data['mean_wasserstein_distance'] = [results['distributional_distances']['mean_wasserstein_distance']]
+                dist_df_data['std_wasserstein_distance'] = [results['distributional_distances']['std_wasserstein_distance']]
+                dist_df_data['mean_mmd_distance'] = [results['distributional_distances']['mean_mmd_distance']]
+                dist_df_data['std_mmd_distance'] = [results['distributional_distances']['std_mmd_distance']]
+                dist_df_data['mmd_sigma_sq_used'] = [results['distributional_distances']['mmd_sigma_sq_used']]
+            
+            if dist_df_data: # only create if data was populated
+                dist_df = pd.DataFrame(dist_df_data)
+                dist_df.to_csv(f'{filepath}_distributional_distances.csv', index=False)
+            
+            # Optionally save all sample distances (can be large)
+            # if 'wasserstein_distances_samples' in results['distributional_distances']:
+            #    pd.DataFrame({'wasserstein': results['distributional_distances']['wasserstein_distances_samples']}).to_csv(f'{filepath}_wasserstein_samples.csv', index=False)
+            # if 'mmd_distances_samples' in results['distributional_distances']:
+            #    pd.DataFrame({'mmd': results['distributional_distances']['mmd_distances_samples']}).to_csv(f'{filepath}_mmd_samples.csv', index=False)
+
     def generate_report(self, results: Optional[Dict[str, Any]] = None, 
                        output_dir: str = 'results/reports/') -> str:
         """

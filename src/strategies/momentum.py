@@ -43,12 +43,13 @@ class MomentumStrategy(BaseStrategy):
     
     def generate_signals(self, data: pd.DataFrame, current_idx: int) -> Signal:
         """Generate momentum-based trading signals."""
-        if current_idx < self.lookback_period:
+        # Ensure we have enough historical data
+        if len(data) <= self.lookback_period or current_idx < self.lookback_period:
             return Signal.HOLD
         
-        # Calculate momentum
-        current_price = data.iloc[current_idx]['close']
-        past_price = data.iloc[current_idx - self.lookback_period]['close']
+        # Calculate momentum using only historical data (no look-ahead bias)
+        current_price = data.iloc[-1]['close']  # Current (most recent) price
+        past_price = data.iloc[-(self.lookback_period + 1)]['close']  # Price lookback_period ago
         momentum = (current_price - past_price) / past_price
         
         if momentum > self.momentum_threshold:

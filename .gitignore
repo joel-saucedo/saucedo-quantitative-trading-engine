@@ -144,32 +144,34 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-# Project specific
-results/reports/*
-results/plots/*
-results/exports/*
-!results/reports/.gitkeep
-!results/plots/.gitkeep
+# Project specific - Results and outputs
+results/archive/
+results/exports/*.json
+results/exports/*.csv
+results/exports/*.xlsx
+results/plots/*.png
+results/plots/*.pdf
+results/plots/*.svg
+results/reports/*.html
+results/reports/*.pdf
+results/backtests/*.json
+results/single_strategy_*/
 !results/exports/.gitkeep
+!results/plots/.gitkeep
+!results/reports/.gitkeep
+!results/backtests/.gitkeep
 
 # Numba cache files
 *.nbc
 *.nbi
 
-# Results and outputs (keep structure but ignore generated files)
-results/plots/*.png
-results/plots/*.pdf
-results/reports/*.html
-results/reports/*.pdf
-results/exports/*.csv
-results/exports/*.xlsx
-
-# Data files (keep structure but ignore actual large data)
-data/sample_data/*.csv
-data/sample_data/*.parquet
-data/sample_data/*.h5
-data/benchmarks/*.csv
-data/benchmarks/*.parquet
+# Data files (actual data, not structure)
+data/crypto/raw/**/*.csv
+data/crypto/raw/**/*.json
+data/crypto/processed/**/*.parquet
+data/sample/**/*.csv
+data/sample/**/*.parquet
+data/sample/**/*.h5
 
 # Configuration files with sensitive data
 config/api_keys.yaml
@@ -185,19 +187,45 @@ config/secrets.yaml
 tmp/
 temp/
 *.tmp
+scratch/
+debug_*
+*_debug.py
+*_temp.py
+
+# Development files
+.coverage*
+pytest.ini
+.pytest_cache/
+.ruff_cache/
 
 # Log files
 *.log
+logs/
 
 # Configuration files with secrets
 config/secrets.yaml
 config/api_keys.env
+config/local_*.yaml
+.env.local
+.env.production
 
-# Large model files
+# Large model files and data
 *.pkl
 *.joblib
 *.h5
 *.hdf5
+*.feather
+
+# Research and analysis outputs
+research/outputs/
+research/notebooks/.ipynb_checkpoints/
+research/**/*.png
+research/**/*.pdf
+
+# Performance profiling
+*.prof
+*.lprof
+*.profile
 
 # Compiled documentation
 docs/_build/

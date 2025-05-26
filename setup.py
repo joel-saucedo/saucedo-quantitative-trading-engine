@@ -10,7 +10,7 @@ setup(
     name="saucedo-quantitative-trading-engine",
     version="1.0.0",
     author="Joel Saucedo",
-    author_email="joel.saucedo@example.com",
+    author_email="joelasaucedo@proton.me.com",
     description="A comprehensive backtesting and strategy analysis framework for quantitative trading",
     long_description=long_description,
     long_description_content_type="text/markdown",

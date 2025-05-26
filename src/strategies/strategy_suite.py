@@ -11,8 +11,13 @@ import numpy as np
 from abc import ABC, abstractmethod
 import warnings
 from pathlib import Path
+import sys
+from pathlib import Path
 
-from ..bootstrapping import AdvancedBootstrapping, BootstrapMethod, BootstrapConfig
+# Add src to path for imports
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from src.bootstrapping import AdvancedBootstrapping, BootstrapMethod, BootstrapConfig
 
 
 class StrategyTestSuite:
@@ -497,3 +502,6 @@ class StrategyTestSuite:
             
         if name in self.results:
             del self.results[name]
+
+
+
