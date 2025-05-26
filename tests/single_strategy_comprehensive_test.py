@@ -115,9 +115,9 @@ class SingleStrategyComprehensiveTest:
                 alpha=validation_profile.alpha
             )
             
-            print(f"✅ Using '{profile}' performance profile")
+            print(f"Using '{profile}' performance profile")
         except Exception as e:
-            print(f"⚠️  Failed to load profile '{profile}', using defaults: {e}")
+            print(f"WARNING: Failed to load profile '{profile}', using defaults: {e}")
             self.bootstrap_config = BootstrapConfig()
             self.validation_config = ValidationConfig()
         
@@ -138,9 +138,9 @@ class SingleStrategyComprehensiveTest:
         
     def run_comprehensive_test(self):
         """Run the complete comprehensive test for the single strategy."""
-        print("🚀 SINGLE STRATEGY COMPREHENSIVE TEST")
+        print("SINGLE STRATEGY COMPREHENSIVE TEST")
         print("=" * 80)
-        print(f"🎯 Strategy: {self.strategy_name.upper()}")
+        print(f"Strategy: {self.strategy_name.upper()}")
         print(f"📅 Testing Period: {self.start_date} to {self.end_date}")
         print(f"📊 Symbols: {', '.join(self.symbols)}")
         print(f"⚙️  Parameters: {self.strategy_params}")

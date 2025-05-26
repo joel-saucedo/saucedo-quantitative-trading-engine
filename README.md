@@ -2,7 +2,7 @@
 
 A streamlined backtesting and strategy analysis framework optimized for rapid strategy development and testing.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Instant Strategy Testing
 ```bash
@@ -49,99 +49,99 @@ python tests/batch_test.py --config config/batch_configs/quick_test.yaml
 python tests/batch_test.py --optimize composite --param-range lookback_window=20,30,40 z_entry_threshold=1.5,2.0,2.5
 ```
 
-## 📁 Optimized Structure
+## Optimized Structure
 
 ```
-📦 saucedo-quantitative-trading-engine/
-├── 🚀 quick_test.py              # Instant strategy testing (5 sec)
-├── 🔄 batch_test.py              # Multi-strategy comparison (1 min)  
-├── 🎮 run_strategy.py            # Interactive development
-├── 🔍 validate_strategies.py     # Quality control & overfitting detection
-├── 🧪 test_integration.py        # System integration tests
-├── 📖 WORKFLOW_GUIDE.md          # Complete development workflow
+saucedo-quantitative-trading-engine/
+├── quick_test.py              # Instant strategy testing (5 sec)
+├── batch_test.py              # Multi-strategy comparison (1 min)  
+├── run_strategy.py            # Interactive development
+├── validate_strategies.py     # Quality control & overfitting detection
+├── test_integration.py        # System integration tests
+├── WORKFLOW_GUIDE.md          # Complete development workflow
 │
-├── 📁 src/strategies/            # Core strategy implementations
-│   ├── momentum.py                 # ⚠️ Needs fixing (40,000% returns)
-│   ├── mean_reversion.py           # ⚠️ Needs fixing (10,000% returns)
-│   ├── composite_pair_trading_strategy.py  # ✅ Working (realistic returns)
+├── src/strategies/            # Core strategy implementations
+│   ├── momentum.py                 # Needs fixing (40,000% returns)
+│   ├── mean_reversion.py           # Needs fixing (10,000% returns)
+│   ├── composite_pair_trading_strategy.py  # Working (realistic returns)
 │   └── strategy_suite.py           # Strategy testing framework
 │
-├── 📁 config/batch_configs/      # Ready-to-use test configurations
+├── config/batch_configs/      # Ready-to-use test configurations
 │   ├── quick_test.yaml             # Basic 3-strategy comparison
 │   └── comprehensive.yaml          # Multi-parameter testing
 │
-├── 📁 data/                      # Preserved market data
-├── 📁 results/exports/           # Auto-saved test results (JSON)
-└── 📁 scripts/backtesting/       # Advanced statistical analysis
+├── data/                      # Preserved market data
+├── results/exports/           # Auto-saved test results (JSON)
+└── scripts/backtesting/       # Advanced statistical analysis
 ```
 
-## 🎯 Optimized Development Workflow
+## Optimized Development Workflow
 
-### ⚡ 1. Instant Validation (5 seconds)
+### 1. Instant Validation (5 seconds)
 ```bash
 # Quick test any strategy + validation check
 python quick_test.py --strategy momentum --quick && python validate_strategies.py
 ```
 
-### 🔧 2. Parameter Optimization (30 seconds)
+### 2. Parameter Optimization (30 seconds)
 ```bash
 # Grid search with immediate results
 python batch_test.py --optimize composite --param-range lookback_window=20,30,40
 ```
 
-### 📊 3. Strategy Comparison (1 minute)
+### 3. Strategy Comparison (1 minute)
 ```bash
 # Comprehensive multi-strategy analysis
 python batch_test.py --config config/batch_configs/comprehensive.yaml
 ```
 
-### 🔍 4. Quality Control (Always)
+### 4. Quality Control (Always)
 ```bash
 # Automated validation catches overfitting
 python validate_strategies.py  # Flags suspicious results automatically
 ```
 
-### 📈 5. Production Analysis (Optional)
+### 5. Production Analysis (Optional)
 ```bash
 # Full statistical validation with bootstrap
 python scripts/backtesting/comprehensive_stat_arb_backtest.py --strategy composite
 ```
 
-> **💡 Pro Tip**: Always run `validate_strategies.py` - it automatically detects overfitted strategies with >1000% returns
+> **Pro Tip**: Always run `validate_strategies.py` - it automatically detects overfitted strategies with >1000% returns
 
-## 💡 Key Features
+## Key Features
 
-### ⚡ Performance Optimized
+### Performance Optimized
 - **10x Faster Bootstrap**: Optimized configurations for development vs production
 - **Smart Caching**: Intelligent data loading and result caching
 - **Memory Efficient**: Reduced memory footprint for large backtests
 - **Configurable Modes**: Development (fast) vs Production (rigorous) configurations
 
-### 🧪 Development-First Approach
+### Development-First Approach
 - **Sub-5 Second Tests**: Quick strategy validation without overhead  
 - **One-Command Testing**: Simple CLI for immediate results
 - **Interactive Mode**: Development-friendly interface
 - **Parameter Optimization**: Automated parameter sweeps
 
-### 🔄 Batch Processing  
+### Batch Processing  
 - **Multi-Strategy Comparison**: Test multiple strategies simultaneously
 - **Configuration-Driven**: YAML-based batch test setup
 - **Export Results**: JSON exports for further analysis
 - **Progress Tracking**: Real-time optimization progress
 
-### 📊 Comprehensive Analysis
+### Comprehensive Analysis
 - **Bootstrap Validation**: Statistical significance testing
 - **Risk Metrics**: VaR, CVaR, Maximum Drawdown, Sharpe ratios
 - **Visual Analysis**: Automated plotting and reporting
 - **Performance Attribution**: Detailed trade-level analysis
 
-### 🎛️ Strategy Framework
+### Strategy Framework
 - **Base Strategy Class**: Easy strategy development
 - **Built-in Strategies**: Momentum, mean reversion, pair trading
 - **Hot Reloading**: Modify strategies without restart
 - **Type Safety**: Full type hints and validation
 
-## 📈 Available Strategies
+## Available Strategies
 
 | Strategy | Description | Best For |
 |----------|-------------|----------|
@@ -149,7 +149,7 @@ python scripts/backtesting/comprehensive_stat_arb_backtest.py --strategy composi
 | **Mean Reversion** | Buy low, sell high based on statistical levels | Range-bound markets |  
 | **Composite Pair Trading** | BTC-ETH pair trading with entropy confirmation | Market-neutral strategies |
 
-## ⚙️ Configuration Examples
+## Configuration Examples
 
 ### Quick Test Configuration (`config/batch_configs/quick_test.yaml`)
 ```yaml
